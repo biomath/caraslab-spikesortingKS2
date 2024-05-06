@@ -37,7 +37,6 @@ for i = 1:numel(datafolders)
     % Catch error if -mat file is not found
     try
         load(fullfile(cur_savedir, 'config.mat'));
-
     catch ME
         if strcmp(ME.identifier, 'MATLAB:load:couldNotReadFile')
             fprintf('\nConfig file not found\n')

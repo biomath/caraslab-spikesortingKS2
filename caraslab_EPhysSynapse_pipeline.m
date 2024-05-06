@@ -46,20 +46,20 @@ Behaviordir = '/mnt/CL_4TB_2/Matt/OFC_PL_recording/matlab_data_files';
 % Probetype = 'NNA4x16Lin64';
 % badchannels = [1:5, 33, 35, 37, 55, 61, 64];
 % % 
-Tankdir = '/mnt/CL_8TB_3/temp_tank/SUBJ-ID-151-210430-165127';
-Savedir =  '/mnt/CL_4TB_2/Matt/OFC_PL_recording/Sorting/SUBJ-ID-151-210430-165127'; 
-Probetype = 'NNA4x16Lin64';
-badchannels = [33, 35, 37, 55, 61, 64];
-% %  
-% % % % 
-% Tankdir = '/mnt/CL_4TB_2/temp_tanks/SUBJ-ID-154-210428-131310';
-% Savedir =  '/mnt/CL_4TB_2/Matt/OFC_PL_recording/Sorting/SUBJ-ID-154-210428-131310'; 
+% Tankdir = '/mnt/CL_4TB_2/temp_tanks/SUBJ-ID-151-210430-165127';
+% Savedir =  '/mnt/CL_4TB_2/Matt/OFC_PL_recording/Sorting/SUBJ-ID-151-210430-165127'; 
 % Probetype = 'NNA4x16Lin64';
 % badchannels = [33, 35, 37, 55, 61, 64];
+% %  
+% % % 
+Tankdir = '/mnt/CL_8TB_3/temp_tank/SUBJ-ID-154-210428-131310';
+Savedir =  '/mnt/CL_4TB_2/Matt/OFC_PL_recording/Sorting/SUBJ-ID-154-210428-131310'; 
+Probetype = 'NNA4x16Lin64';
+badchannels = [33, 35, 37, 55, 61, 64];
 
 % % 
 % Tankdir = '/mnt/CL_4TB_2/temp_tanks/SUBJ-ID-174-201020-101024';
-% Savedir =  '/mnt/CL_4TB_2/Matt/OFCmuscimol_ACxrecording/Sorting/SUBJ-ID-174-201020-101024'; 
+% Savedir =  '/mnt/CL_8TB_3/Matheus/Ephys recordings/OFC-Cannula_ACx-Electrode/Sorting/SUBJ-ID-174-201020-101024'; 
 % Probetype = 'NNBuz5x1264';
 % badchannels = [33, 35, 37, 55, 61, 64];
 
@@ -108,7 +108,7 @@ caraslab_reformat_synapse_data(Tankdir,Savedir);
 % IMPORTANT: if behavior is relevant, run this now so that createconfig can
 % extract information about how much of the beginning of the recording to 
 % skip due to noise
-
+    
 % IMPORTANT 2: organize your behavior files into subfolders to be analyzed together , e.g.
 % shockTraining_pre, shockTraining_active, psychTesting_active, psychTesting_muscimol etc
 % select those folders when prompted (you can select multiple folders)
@@ -159,10 +159,12 @@ caraslab_preprocessdat(Savedir, inspect_artifact_removal_only)
 % starts
 caraslab_concatenate_sameDay_recordings(Savedir, chanMap, 'synapse')
 
+%%
+caraslab_concatenate_sameDay_configs(Savedir, chanMap, 'synapse')
 
 %% 8. CONCATENATE SAME DEPTH RECORDINGS ACROSS DAYS
 % % not currently in use
-caraslab_concatenate_sameDepth_recordings(Savedir, 'synapse')
+% caraslab_concatenate_sameDepth_recordings(Savedir, 'synapse')
 
 %% 9. RUN KILOSORT
 %   This function runs kilosort on the selected data.

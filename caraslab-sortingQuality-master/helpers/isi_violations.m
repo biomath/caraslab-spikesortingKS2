@@ -1,5 +1,5 @@
 
-function [fpRate, num_violations] = isi_violations(spike_train, min_time, max_time, isi_threshold, min_isi, ops)
+function [fpRate, percentViolation] = isi_violations(spike_train, min_time, max_time, isi_threshold, min_isi, ops)
 %     From Allen Brain Institute repository
 %     Translated from Python by M Macedo-Lima,  December 2020
 
@@ -27,10 +27,10 @@ function [fpRate, num_violations] = isi_violations(spike_train, min_time, max_ti
 % 
 %     """
 
-    % MML edit: for concatenated recordings, the presence ratio is
-    % confounded by periods of noise that were not removed before sorting
+    % MML edit: for concatenated Synapse recordings, the presence ratio
+    % may be confounded by periods of noise that were not removed before sorting
     % (consider removing these in the future). Because of this we need to
-    % revisit the file before concatenation to fibure out where the
+    % revisit the file before concatenation to figure out where the
     % non-noisy recording starts. So we need to run this for every file
     % then compile the results
     if nargin > 5
@@ -67,5 +67,8 @@ function [fpRate, num_violations] = isi_violations(spike_train, min_time, max_ti
     total_rate = num_spikes / (max_time - min_time);
     violation_rate = num_violations/violation_time;
     fpRate = violation_rate/total_rate;
+    
+    % Percent of spikes that violate refractory period
+    percentViolation = num_violations/num_spikes * 100;
     
 end

@@ -103,6 +103,7 @@ function cluster_quality_metrics(Savedir, show_plots, bp_filter, load_previous_g
         shanks = zeros(length(gwfparams.good_clusters), 1);
         cluster_quality = zeros(length(gwfparams.good_clusters), 1);  % zeros will be MU, ones will be SU
         fpRate_list = zeros(length(gwfparams.good_clusters), 1);
+        violationRate_list = zeros(length(gwfparams.good_clusters), 1);
         fraction_missing_list = zeros(length(gwfparams.good_clusters), 1);
         presence_ratio_list = zeros(length(gwfparams.good_clusters), 1);
         if show_plots
@@ -192,9 +193,9 @@ function cluster_quality_metrics(Savedir, show_plots, bp_filter, load_previous_g
             min_isi = 0.00015;
             
             % Then run
-            [fpRate, ~] = isi_violations(all_spike_times, min_time, max_time, isi_threshold, min_isi, ops);
+            [fpRate, percentViolation] = isi_violations(all_spike_times, min_time, max_time, isi_threshold, min_isi, ops);
             fpRate_list(wf_idx) = fpRate;
-            
+            violationRate_list(wf_idx) = percentViolation;
             % TODO: Reconstruct autocorrelograms
             
             %% Amplitude cutoff
@@ -236,9 +237,9 @@ function cluster_quality_metrics(Savedir, show_plots, bp_filter, load_previous_g
         
         %% write csv
         TT = array2table([gwfparams.good_clusters best_channels_csv shanks ...
-            cluster_quality fpRate_list fraction_missing_list presence_ratio_list],...
+            cluster_quality fpRate_list violationRate_list fraction_missing_list presence_ratio_list],...
             'VariableNames',{'Cluster' 'Best_channel' 'Shank' ...
-            'Cluster_quality' 'ISI_FPRate' 'Fraction_missing', 'Presence_ratio'});
+            'Cluster_quality' 'ISI_FPRate' 'ISI_ViolationRate' 'Fraction_missing', 'Presence_ratio'});
         
         % Change code into words
         TT.Cluster_quality = num2cell(TT.Cluster_quality);

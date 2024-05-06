@@ -121,7 +121,7 @@ for i = 1:numel(BLOCKNAMES)
         fprintf('\nSuccessfully saved supporting info to:\n\t %s',infofilename)
     catch
         warning('\n ** Could not save file **.\n')
-        keyboard
+%         keyboard
     end
     
     tEnd = toc(t0);

@@ -1,10 +1,14 @@
-function caraslab_mat2datChunked(Savedir)
+function caraslab_mat2datChunked(Savedir, delete_matfile)
 %
 % This function converts -mat files to 16 bit integer -dat files, the
 % required input format for kilosort. 
 % This function also runs a quick RMS-based bad channel detector.
 %Written by ML Caras Mar 27 2019
 % Patched by M Macedo-Lima August, 2021
+
+if nargin < 2
+    delete_matfile = 0;
+end
 
 %Prompt user to select folder
 datafolders_names = uigetfile_n_dir(Savedir,'Select data directory');
@@ -112,6 +116,12 @@ for i = 1:numel(datafolders)
     
     
     fprintf('Finished in: %d minutes and %f seconds\n', floor(tEnd/60),rem(tEnd,60));
+    
     %Save configuration file
     save(fullfile(cur_savedir, 'config.mat'),'ops')
+    
+    % Delete matfile if desired
+    if delete_matfile
+        delete(mat_file);
+    end
 end

@@ -130,7 +130,7 @@ for i = 1:numel(datafolders)
     ops.fig = 0;  % Show kilosort sorting quality diagnostic plots
     
     ops.rm_artifacts = 1;  % Remove super high amplitude events
-    ops.std_threshold = 30;  % Threshold for artifact rejection (65)
+    ops.std_threshold = 65;  % Threshold for artifact rejection (65)
     
     ops.Nchan = ops.NchanTOT - numel(badchannels);              %number of active channels
 

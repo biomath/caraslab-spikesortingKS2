@@ -32,7 +32,7 @@
 % rootH: path for temp Kilosort file. Should be a fast SSD
 
 
-% Behaviordir = '/mnt/CL_4TB_2/Matt/OFC_PL_recording/matlab_data_files';
+Behaviordir = '/mnt/CL_4TB_2/Matt/OFC_PL_recording/matlab_data_files';
 
 % OFC PL
 % Tankdir = '/mnt/CL_4TB_2/temp_tanks/SUBJ-ID-231';
@@ -110,7 +110,7 @@
 % badchannels = [];
 
 % OFCMuscimol + ACx recordings
-Behaviordir = '/mnt/CL_8TB_3/Matheus/Ephys recordings/OFC-Cannula_ACx-Electrode/matlab_data_files';
+% Behaviordir = '/mnt/CL_8TB_3/Matheus/Ephys recordings/OFC-Cannula_ACx-Electrode/matlab_data_files';
 
 % Tankdir = '/mnt/CL_4TB_2/temp_tanks/SUBJ-ID-423';
 % Savedir =  '/mnt/CL_4TB_2/Matt/OFCmuscimol_ACxrecording/Sorting/SUBJ-ID-423'; 
