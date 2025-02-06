@@ -7,8 +7,10 @@ function caraslab_reformat_OpenEphysGUI_data(input_dir, output_dir, format, data
     %
     %       Savedir:    path to directory where -mat and -csv files will be saved
     %
-    %       format:     'oe':      OpenEphys format
-    %                   'binary':   Binary format
+    %       format:     'oe':           OpenEphys format
+    %                   'binary':       Binary format
+    %                   'oe_info':      OpenEphys format (only info files)
+    %                   'oe_binary':    Binary format (only info files)
     %  
     %   Output:
     %       Reformatted .dat file with ephys data
@@ -95,6 +97,10 @@ function caraslab_reformat_OpenEphysGUI_data(input_dir, output_dir, format, data
                     handle_oe_data();
                 case 'binary'
                     handle_binary_data();
+                case 'oe_info'
+                    handle_oe_info();
+                case 'binary_info'
+                    handle_binary_info();
             end
         catch ME
             if strcmp(ME.identifier, 'MATLAB:load:couldNotReadFile')
@@ -346,6 +352,189 @@ function caraslab_reformat_OpenEphysGUI_data(input_dir, output_dir, format, data
         end
         
         clear rawsig cur_ch_data;
+        
+        %% Read DAC channels; Bundle in a .info file and output as CSV
+        % unpack them in the behavior pipeline; this struct is meant to
+        % look somewhat similar to the TDT epData that comes out of Synapse
+        
+        % For Rig2 with ePsych:
+        % 0: DAC1 = sound on/off
+        % 1: DAC2 = spout on/off
+        % 2: DAC3 = trial start/end
+        fprintf('Reading Events channels:\n')
+        dac_data = load_open_ephys_binary(fullfile(oebin_filedir.folder, oebin_filedir.name), 'events', 1);
+
+        epData.event_states = uint16(dac_data.Data) ./ dac_data.ChannelIndex;
+        epData.event_ids = dac_data.ChannelIndex;  % convert to 1-base index
+        epData.timestamps = double(dac_data.Timestamps - all_data.Timestamps(1)) / dac_data.Header.sample_rate; % Zero TTL timestamps based on the first sampled data  time
+        epData.info.blockname = cur_path.name;
+               
+        % Grab date and timestamp from info
+        block_date_timestamp = info.header.date_created;
+        block_date_timestamp = datevec(block_date_timestamp, 'dd-mmm-yyyy HH:MM:SS');
+        epData.info.StartTime = block_date_timestamp;  % TDT-like
+        
+        save(events_filename, 'epData','-v7.3');
+        
+        % Output each channel with events as separate csv with onset,
+        % offset and duration
+        unique_dacs = unique(epData.event_ids);
+        for cur_event_id_idx=1:length(unique_dacs)
+            cur_event_id = unique_dacs(cur_event_id_idx);
+            cur_event_mask = epData.event_ids == cur_event_id;
+            cur_event_states = epData.event_states(cur_event_mask);            
+            cur_timestamps = epData.timestamps(cur_event_mask);
+            
+            cur_onsets = cur_timestamps(cur_event_states == 1);
+            cur_offsets = cur_timestamps(cur_event_states == 0);
+            
+            % Handle DAC exceptions here
+            % Skip DAC if either onset or offset are completely absent
+            if isempty(cur_onsets) || isempty(cur_offsets)
+                continue
+            end
+            
+            % Remove first offset if lower than first onset 
+            if cur_offsets(1) < cur_onsets(1)
+                cur_offsets = cur_offsets(2:end);
+            end
+            % Remove last onset if length mismatch
+            if length(cur_onsets) ~= length(cur_offsets)
+                cur_onsets = cur_onsets(1:end-1);
+            end
+            
+            % Calulate durations
+            cur_durations = cur_offsets - cur_onsets;
+            
+            % Convert to table and output csv
+            
+            fileID = fopen(fullfile(cur_savedir, 'CSV files', ...
+                [cur_path.name '_DAC' int2str(cur_event_id) '.csv']), 'w');
+
+            header = {'Onset', 'Offset', 'Duration'};
+            fprintf(fileID,'%s,%s,%s\n', header{:});
+            nrows = length(cur_onsets);
+            for idx = 1:nrows
+                output_cell = {cur_onsets(idx), cur_offsets(idx), cur_durations(idx)};
+
+                fprintf(fileID,'%f,%f,%f\n', output_cell{:});
+            end
+            fclose(fileID);
+        end
+    end
+
+    function handle_oe_info()
+        % This function only extracts the metadata from recordings
+        % This function looks at only one data channel (required in folder) to
+        % extract starting timestamp information.
+
+        % Data channels have the naming convention *CHXX.continuous
+        % Read recording info to get channel order; ADC channels will also
+        % be in the mix; Channels should come out in order
+        session_info = get_session_info(fullpath); 
+        
+        % Find the index of the recording node (assume only one)
+        node_idx = find(contains(session_info.processors(:,2),'Filters/Record Node'));
+        
+        % Something weird happens sometimes
+        all_channels = session_info.processors{node_idx, 3}{1};
+        if isempty(all_channels)
+            all_channels = session_info.processors{node_idx, 3}{2};
+        end
+        
+        data_channels = all_channels(contains(all_channels,'CH'));
+        
+        % Weird bug in OpenEphys GUI sometimes names these differently
+        % Tweak this mannually
+        if isempty(data_channels)
+            disp('No channels named CH; Make sure you provided channel numbers')
+            if isempty(data_channel_idx)
+                disp('Please provide array with data channel numbers, e.g. 1:64')
+                return
+            end
+            
+            data_channels = all_channels(data_channel_idx);
+        end
+        
+        %% Read DAC channels; Bundle in a .info file and output as CSV
+        % unpack them in the behavior pipeline; this struct is meant to
+        % look somewhat similar to the TDT epData that comes out of Synapse
+        
+        % For Rig2 with ePsych:
+        % 0: DAC1 = sound on/off
+        % 1: DAC2 = spout on/off
+        % 2: DAC3 = trial start/end
+        fprintf('Reading Events channels:\n')
+        
+        % Load only a little bit of a channel file to get the zero timestamp info
+        [~, data_timestamps, ~, ~] = load_open_ephys_data_chunked(fullfile(fullpath, data_channels{1}), 0, 5, 'samples');
+
+        [event_ids, timestamps, info] = load_open_ephys_data_faster(fullfile(fullpath, 'all_channels.events'));
+        epData.event_ids = event_ids + 1;  % Convert to 1-base index
+        epData.event_states = info.eventId;
+        epData.timestamps = timestamps - data_timestamps(1); % Zero TTL timestamps based on the first sampled data  time
+        epData.info.blockname = cur_path.name;
+                
+        % Grab date and timestamp from info
+        block_date_timestamp = info.header.date_created;
+        block_date_timestamp = datevec(block_date_timestamp, 'dd-mmm-yyyy HH:MM:SS');
+        epData.info.StartTime = block_date_timestamp;  % TDT-like
+        
+        save(events_filename, 'epData','-v7.3');
+        
+        % Output each channel with events as separate csv with onset,
+        % offset and duration
+        unique_dacs = unique(epData.event_ids);
+        for cur_event_id_idx=1:length(unique_dacs)
+            cur_event_id = unique_dacs(cur_event_id_idx);
+            cur_event_mask = epData.event_ids == cur_event_id;
+            cur_event_states = epData.event_states(cur_event_mask);            
+            cur_timestamps = epData.timestamps(cur_event_mask);
+            
+            cur_onsets = cur_timestamps(cur_event_states == 1);
+            cur_offsets = cur_timestamps(cur_event_states == 0);
+            
+            % Handle DAC exceptions here
+            % Skip DAC if either onset or offset are completely absent
+            if isempty(cur_onsets) || isempty(cur_offsets)
+                continue
+            end
+            
+            % Remove first offset if lower than first onset 
+            if cur_offsets(1) < cur_onsets(1)
+                cur_offsets = cur_offsets(2:end);
+            end
+            
+            % Remove last onset if length mismatch
+            if length(cur_onsets) ~= length(cur_offsets)
+                cur_onsets = cur_onsets(1:end-1);
+            end
+            
+            % Calulate durations
+            cur_durations = cur_offsets - cur_onsets;
+            
+            % Convert to table and output csv
+            
+            fileID = fopen(fullfile(cur_savedir, 'CSV files', ...
+                [cur_path.name '_DAC' int2str(cur_event_id) '.csv']), 'w');
+
+            header = {'Onset', 'Offset', 'Duration'};
+            fprintf(fileID,'%s,%s,%s\n', header{:});
+            nrows = length(cur_onsets);
+            for idx = 1:nrows
+                output_cell = {cur_onsets(idx), cur_offsets(idx), cur_durations(idx)};
+
+                fprintf(fileID,'%f,%f,%f\n', output_cell{:});
+            end
+            fclose(fileID);
+
+        end
+    end
+
+    function handle_binary_info()
+        % This function only extracts the metadata from recordings
+        
+        oebin_filedir = dir(fullfile(fullpath, '**', '*.oebin'));
         
         %% Read DAC channels; Bundle in a .info file and output as CSV
         % unpack them in the behavior pipeline; this struct is meant to
